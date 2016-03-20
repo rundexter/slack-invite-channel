@@ -34,10 +34,23 @@ module.exports = {
 
                         req = agent.post(url)
                                 .type('form')
-                                .send(_.extend({token: token, user: user, channel: channel }))
+                                .send(_.extend({token: token, user: user, channel: channel.id }))
                         ;
 
-                        return promisify(req, 'end', 'body.group');
+                        return promisify(req, 'end', 'body.group')
+                                .catch(function(err) {
+                                    console.log(err.error, channel);
+                                    if(err.error === 'cant_invite_self') {
+                                        return promisify(
+                                            agent.post(baseUrl+'channels.join')
+                                                .type('form')
+                                                .send({token: token, name: channel.name })
+                                            , 'end'
+                                        );
+                                    }
+
+                                    throw err;
+                                });
                     })
             );
         });
@@ -48,28 +61,44 @@ module.exports = {
         ;
     }
 
+    /**
+     *  Gets the full channel object either by name or id
+     *
+     *  @param { String } token - access token
+     *  @param { String } channel - the channel id or name
+     *
+     *  @return { q/Promise} 
+     */
     , getChannel: function(token, channel) {
-        if(channel[0] === '#') {
-           return promisify(
-             agent.post(baseUrl+'channels.list')
-                .type('form')
-                .send({ token: token })
-             , 'end', 'body.channels'
-           ).then(function(channels) {
-              var objChannel=_.find(channels, { name: channel.substr(1) });
-              
-              if(objChannel) {
-                return objChannel.id;
-              }
+        return promisify(
+            agent.post(baseUrl+'channels.list')
+              .type('form')
+              .send({ token: token })
+              , 'end', 'body.channels'
+        ).then(function(channels) {
+            var objChannel;
+            if(channel[0] === '#') {
+                objChannel=_.find(channels, { name: channel.substr(1) });
+            } else {
+                objChannel=_.find(channels, { id: channel });
+            }
 
-              throw new Error("Channel not found.");
-           });
-        } else {
-           return channel;
-        }
+            if(objChannel)
+                return objChannel;
 
+            throw new Error("Channel not found.");
+        });
     }
 
+    /**
+     *  Checks the user param, determines if it's an ID
+     *  if it's an ID, returns it, else finds the ID
+     *
+     *  @param { String } token - access token
+     *  @param { String } user  - A user ID or username
+     *
+     *  @returns a promise or user id
+     */
     , getUser: function(token, user) {
         if(user[0] === '@') {
            return promisify(
