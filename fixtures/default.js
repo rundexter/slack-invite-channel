@@ -63,7 +63,7 @@ module.exports = _.merge({
              */
             input: {
                 channel_id : '#_12404189814',
-                user_id    : '@daniel'
+                user_id    : '@sms_bot'
             }
         }
     }

@@ -39,7 +39,6 @@ module.exports = {
 
                         return promisify(req, 'end', 'body.group')
                                 .catch(function(err) {
-                                    console.log(err.error, channel);
                                     if(err.error === 'cant_invite_self') {
                                         return promisify(
                                             agent.post(baseUrl+'channels.join')
@@ -47,6 +46,8 @@ module.exports = {
                                                 .send({token: token, name: channel.name })
                                             , 'end'
                                         );
+                                    } else if(err.error == 'already_in_channel') {
+                                        return q();
                                     }
 
                                     throw err;
